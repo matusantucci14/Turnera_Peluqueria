@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turnos Peluquería</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="turnos-calendar.css">
+</head>
+<body>
+  <div class="container">
+    <h1 align="center">Turnera para Peluquería</h1>
+    <h2>Reservá tu turno para SEPTIEMBRE 2025</h2>
+    <div id="calendar"></div>
+    <button id="toggle-slots" class="toggle-slots-btn" style="display:none;margin:0 auto 18px auto;">Ocultar horarios</button>
+    <div id="slots" class="slots"></div>
+    <button id="confirm-btn" class="toggle-slots-btn" style="display:none;">Confirmar turno</button>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    // Configuración
+    const minHour = 9;
+    const maxHour = 18;
+    const interval = 30; // minutos
+    const openDays = [2,3,4,5,6]; // martes a sábado (0=domingo, 1=lunes)
+    let booked = {
+      // Simulación de turnos reservados
+      '2025-09-18': ['09:00', '09:30', '10:00'],
+      '2025-09-19': ['11:00', '11:30']
+    };
+    let selectedDate = null;
+    let selectedSlot = null;
+    let currentUser = 'cliente@ejemplo.com'; // Simulación de usuario logueado
+
+    // Helpers
+    function getDaysInMonth(year, month) {
+      return new Date(year, month + 1, 0).getDate();
+    }
+    function pad(n) { return n < 10 ? '0'+n : n; }
+    function formatDate(date) {
+      return date.getFullYear() + '-' + pad(date.getMonth()+1) + '-' + pad(date.getDate());
+    }
+    function isOpenDay(date) {
+      return openDays.includes(date.getDay());
+    }
+    function getSlots(date) {
+      const slots = [];
+      for(let h = minHour; h < maxHour; h++) {
+        for(let m = 0; m < 60; m += interval) {
+          const slot = pad(h)+":"+pad(m);
+          if(!booked[formatDate(date)] || !booked[formatDate(date)].includes(slot)) {
+            slots.push(slot);
+          }
+        }
+      }
+      return slots;
+    }
+    function isSlotBookedByUser(date, slot) {
+      // Simulación: solo un turno por usuario por día
+      return booked[formatDate(date)] && booked[formatDate(date)].includes(slot);
+    }
+
+    // Render calendario tipo tabla (mes actual)
+    function renderCalendar() {
+      const cal = document.getElementById('calendar');
+      cal.innerHTML = '';
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const days = getDaysInMonth(year, month);
+      const firstDay = new Date(year, month, 1).getDay();
+      let table = '<table class="calendar-table"><thead><tr>';
+      const weekDays = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      for(let d=0;d<7;d++) table += `<th>${weekDays[d]}</th>`;
+      table += '</tr></thead><tbody><tr>';
+      let day = 1;
+      for(let i=0;i<42;i++){
+        if(i<firstDay || day>days){
+          table += '<td></td>';
+        } else {
+          const date = new Date(year, month, day);
+          const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const isAvailable = isOpenDay(date) && !isPast;
+          let cls = '';
+          if(!isAvailable) cls = 'disabled';
+          if(selectedDate && formatDate(date) === formatDate(selectedDate)) cls += ' selected';
+          table += `<td class="calendar-day ${cls}" data-date="${formatDate(date)}" ${isAvailable ? '' : 'tabindex="-1" aria-disabled="true"'}>${day}</td>`;
+          day++;
+        }
+        if((i+1)%7===0) table += '</tr><tr>';
+      }
+      table += '</tr></tbody></table>';
+      cal.innerHTML = table;
+      document.querySelectorAll('.calendar-day').forEach(td => {
+        if(!td.classList.contains('disabled')){
+          td.onclick = function(){
+            selectedDate = new Date(td.getAttribute('data-date'));
+            selectedSlot = null;
+            renderCalendar();
+            renderSlots();
+          }
+        }
+      });
+    }
+
+    function renderSlots() {
+      const slotsDiv = document.getElementById('slots');
+      const confirmBtn = document.getElementById('confirm-btn');
+      slotsDiv.innerHTML = '';
+      confirmBtn.style.display = 'none';
+      if(!selectedDate) return;
+      const slots = [];
+      for(let h = minHour; h < maxHour; h++) {
+        for(let m = 0; m < 60; m += interval) {
+          const slot = pad(h)+":"+pad(m);
+          let disabled = false;
+          if(booked[formatDate(selectedDate)] && booked[formatDate(selectedDate)].includes(slot)) disabled = true;
+          slots.push({slot, disabled});
+        }
+      }
+      let html = '<div class="slots-list">';
+      slots.forEach(({slot, disabled}) => {
+        html += `<button class="slot-btn${disabled ? ' slot-disabled' : ''}${selectedSlot===slot ? ' slot-selected' : ''}" ${disabled ? 'disabled' : ''} data-slot="${slot}">${slot}</button>`;
+      });
+      html += '</div>';
+      slotsDiv.innerHTML = html;
+      document.querySelectorAll('.slot-btn').forEach(btn => {
+        if(!btn.classList.contains('slot-disabled')){
+          btn.onclick = function(){
+            selectedSlot = btn.getAttribute('data-slot');
+            renderSlots();
+            confirmBtn.style.display = 'block';
+            confirmBtn.disabled = false;
+          }
+        }
+      });
+      confirmBtn.onclick = function(){
+        if(!selectedDate || !selectedSlot){
+          Swal.fire('Error','Debes seleccionar un día y horario válido','error');
+          return;
+        }
+        // Simulación de reserva
+        if(!booked[formatDate(selectedDate)]) booked[formatDate(selectedDate)] = [];
+        if(booked[formatDate(selectedDate)].includes(selectedSlot)){
+          Swal.fire('Error','Ese turno ya fue reservado.','error');
+          return;
+        }
+        booked[formatDate(selectedDate)].push(selectedSlot);
+        Swal.fire('¡Turno reservado!','Tu turno para el '+formatDate(selectedDate)+' a las '+selectedSlot+' fue registrado.','success');
+        selectedDate = null;
+        selectedSlot = null;
+        renderCalendar();
+        renderSlots();
+      }
+    }
+
+    // Inicialización
+    renderCalendar();
+    renderSlots();
+  </script>
+</body>
+</html>
