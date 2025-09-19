@@ -2,10 +2,28 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import bcrypt from 'bcrypt';
-import { getDB } from './peluqueria/backend/db.js';
+import path from 'path'; // Agrega esta línea
+import { getDB } from './db.js';
+import { fileURLToPath } from 'url';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // Mejor usar una variable de entorno
+
+app.use(cors());
+app.use(bodyParser.json());
+
+// Agrega estas dos líneas para servir tus archivos de frontend
+app.use(express.static(path.join(__dirname, 'peluqueria')));
+
+// Ruta para la página de inicio que sirve el index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'peluqueria', 'index.html'));
+});
+// Agrega estas 2 líneas
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -68,3 +86,4 @@ app.post('/api/login', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
 });
+
