@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import bcrypt from 'bcrypt';
-import { getDB } from './db.js';
+import { getDB } from './peluqueria/backend/db.js';
 
 const app = express();
 const PORT = 3001;
